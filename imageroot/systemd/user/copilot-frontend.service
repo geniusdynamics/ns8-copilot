@@ -16,21 +16,21 @@ WorkingDirectory=%S/state
 Restart=always
 TimeoutStopSec=70
 ExecStartPre=/bin/mkdir -p tmp
-ExecStartPre=/bin/rm -f %t/copilot-backend.pid %t/copilot-backend.ctr-id
+ExecStartPre=/bin/rm -f %t/copilot-frontend.pid %t/copilot-frontend.ctr-id
 ExecStartPre=-runagent discover-smarthost
-ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-backend.pid \
-    --cidfile %t/copilot-backend.ctr-id --cgroups=no-conmon \
-    --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-backend \
-    --volume copilot-backend:/var/www/html/:Z \
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-frontend.pid \
+    --cidfile %t/copilot-frontend.ctr-id --cgroups=no-conmon \
+    --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-frontend \
+    --volume copilot-frontend:/var/www/html/:Z \
     --volume ./tmp:/tmp:Z \
     --env=COPILOT_* \
     --env SERVER_HOST=${SERVER_HOST} \
     ${COPILOT_FRONTEND_IMAGE}
-ExecStop=/usr/bin/podman stop --ignore --cidfile %t/copilot-backend.ctr-id -t 10
-ExecReload=/usr/bin/podman kill -s HUP copilot-backend
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/copilot-frontend.ctr-id -t 10
+ExecReload=/usr/bin/podman kill -s HUP copilot-frontend
 SyslogIdentifier=%u
-ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/copilot-backend.ctr-id
-PIDFile=%t/copilot-backend.pid
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/copilot-frontend.ctr-id
+PIDFile=%t/copilot-frontend.pid
 Type=forking
 
 [Install]

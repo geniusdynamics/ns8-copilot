@@ -16,11 +16,11 @@ WorkingDirectory=%S/state
 Restart=always
 TimeoutStopSec=70
 ExecStartPre=/bin/mkdir -p tmp
-ExecStartPre=/bin/rm -f %t/copilot-app.pid %t/copilot-app.ctr-id
+ExecStartPre=/bin/rm -f %t/copilot-backend.pid %t/copilot-backend.ctr-id
 ExecStartPre=-runagent discover-smarthost
-ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-app.pid \
-    --cidfile %t/copilot-app.ctr-id --cgroups=no-conmon \
-    --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-app \
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-backend.pid \
+    --cidfile %t/copilot-backend.ctr-id --cgroups=no-conmon \
+    --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-backend \
     --volume copilot-logs:/opt/logs \
     --volume copilot-data:/opt/copilot/backend/data \
     --env=COPILOT_* \
@@ -65,11 +65,11 @@ ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-app.pid \
     --env GELF_INPUT_PORT=gelf_port \
     --env ALERT_CREATION_PROVISIONING_URL=http://1.1.1.1 \
     ${COPILOT_BACKEND_IMAGE}
-ExecStop=/usr/bin/podman stop --ignore --cidfile %t/copilot-app.ctr-id -t 10
-ExecReload=/usr/bin/podman kill -s HUP copilot-app
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/copilot-backend.ctr-id -t 10
+ExecReload=/usr/bin/podman kill -s HUP copilot-backend
 SyslogIdentifier=%u
-ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/copilot-app.ctr-id
-PIDFile=%t/copilot-app.pid
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/copilot-backend.ctr-id
+PIDFile=%t/copilot-backend.pid
 Type=forking
 
 [Install]
