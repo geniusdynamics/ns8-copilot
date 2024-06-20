@@ -1,0 +1,76 @@
+#
+# Copyright (C) 2022 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+[Unit]
+Description=Podman  copilot-backend.service
+BindsTo=copilot.service
+After=copilot.service mariadb-app.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%S/state/environment
+EnvironmentFile=-%S/state/smarthost.env
+WorkingDirectory=%S/state
+Restart=always
+TimeoutStopSec=70
+ExecStartPre=/bin/mkdir -p tmp
+ExecStartPre=/bin/rm -f %t/copilot-app.pid %t/copilot-app.ctr-id
+ExecStartPre=-runagent discover-smarthost
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-app.pid \
+    --cidfile %t/copilot-app.ctr-id --cgroups=no-conmon \
+    --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-app \
+    --volume copilot-logs:/opt/logs \
+    --volume copilot-data:/opt/copilot/backend/data \
+    --env=COPILOT_* \
+    --env MARIADB_DB_TYPE=mysql \
+    --env MARIADB_DB_HOST=127.0.0.1 \
+    --env MARIADB_DB_PORT=3306 \
+    --env MARIADB_DB_USER=copilot \
+    --env MARIADB_DB_PASSWORD=copilot \
+    --env MARIADB_DB_NAME=copilot \
+    --env SERVER_IP=0.0.0.0 \
+    --env WAZUH_INDEXER_URL=https://1.1.1.1:9200 \
+    --env WAZUH_INDEXER_USERNAME=admin \
+    --env WAZUH_INDEXER_PASSWORD=admin \
+    --env WAZUH_MANAGER_URL=https://1.1.1.1 \
+    --env WAZUH_MANAGER_USERNAME=dummy \
+    --env WAZUH_MANAGER_PASSWORD=dummy \
+    --env GRAYLOG_URL=http://1.1.1.1 \
+    --env GRAYLOG_USERNAME=dummy \
+    --env GRAYLOG_PASSWORD=dummy \
+    --env SHUFFLE_URL=https://1.1.1.1 \
+    --env SHUFFLER_API_KEY=dummy \
+    --env DFIR_IRIS_URL=https://1.1.1.1 \
+    --env DFIR_IRIS_API_KEY=dummy \
+    --env VELOCIRAPTOR_URL=https://1.1.1.1 \
+    --env VELOCIRAPTOR_API_KEY_PATH=dummy \
+    --env SUBLIME_URL=http://1.1.1.1 \
+    --env SUBLIME_API_KEY=dummy \
+    --env INFLUXDB_URL=http://1.1.1.1 \
+    --env INFLUXDB_API_KEY=dummy \
+    --env INFLUXDB_ORG_AND_BUCKET=dummy,dummy \
+    --env ASKSOCFORTRESS_URL=https://knowledge.socfortress.co \
+    --env ASKSOCFORTRESS_API_KEY=dummy \
+    --env SOCFORTRESSTHREATINTEL_URL=https://intel.socfortress.co/search \
+    --env SOCFORTRESSTHREATINTEL_API_KEY=dummy \
+    --env CORTEX_URL=http://1.1.1.1 \
+    --env CORTEX_API_KEY=dummy \
+    --env GRAFANA_URL=http://1.1.1.1 \
+    --env GRAFANA_USERNAME=dummy \
+    --env GRAFANA_PASSWORD=dummy \
+    --env WAZUH_WORKER_PROVISIONING_URL=http://1.1.1.1 \
+    --env EVENT_SHIPPER_URL=graylog_host \
+    --env GELF_INPUT_PORT=gelf_port \
+    --env ALERT_CREATION_PROVISIONING_URL=http://1.1.1.1 \
+    ${COPILOT_BACKEND_IMAGE}
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/copilot-app.ctr-id -t 10
+ExecReload=/usr/bin/podman kill -s HUP copilot-app
+SyslogIdentifier=%u
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/copilot-app.ctr-id
+PIDFile=%t/copilot-app.pid
+Type=forking
+
+[Install]
+WantedBy=default.target
