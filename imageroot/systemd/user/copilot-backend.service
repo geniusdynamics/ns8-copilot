@@ -24,12 +24,10 @@ ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-backend.pid \
     --volume copilot-logs:/opt/logs \
     --volume copilot-data:/opt/copilot/backend/data \
     --env=COPILOT_* \
-    --env MARIADB_DB_TYPE=mysql \
-    --env MARIADB_DB_HOST=127.0.0.1 \
-    --env MARIADB_DB_PORT=3306 \
-    --env MARIADB_DB_USER=copilot \
-    --env MARIADB_DB_PASSWORD=copilot \
-    --env MARIADB_DB_NAME=copilot \
+    --env MYSQL_UR=127.0.0.1 \
+    --env MYSQL_USER=copilot \
+    --env MYSQL_PASSWORD=copilot \
+    --env MYSQL_DATABASE=copilot \
     --env SERVER_IP=0.0.0.0 \
     --env WAZUH_INDEXER_URL=https://1.1.1.1:9200 \
     --env WAZUH_INDEXER_USERNAME=admin \
