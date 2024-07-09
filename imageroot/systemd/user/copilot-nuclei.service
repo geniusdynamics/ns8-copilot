@@ -1,0 +1,36 @@
+#
+# Copyright (C) 2022 Nethesis S.r.l.
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+[Unit]
+Description=Podman  copilot-nuclei.service
+BindsTo=copilot.service
+After=copilot.service mariadb-app.service copilot-backend.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%S/state/environment
+EnvironmentFile=-%S/state/smarthost.env
+WorkingDirectory=%S/state
+Restart=always
+TimeoutStopSec=70
+ExecStartPre=/bin/mkdir -p tmp
+ExecStartPre=/bin/rm -f %t/copilot-nuclei.pid %t/copilot-nuclei.ctr-id
+ExecStartPre=-runagent discover-smarthost
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-nuclei.pid \
+    --cidfile %t/copilot-nuclei.ctr-id --cgroups=no-conmon \
+    --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-nuclei \
+    --volume copilot-nuclei:/var/www/html/:Z \
+    --volume ./tmp:/tmp:Z \
+    --env=COPILOT_* \
+    ${COPILOT_NUCLEI_MODULE_IMAGE}
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/copilot-nuclei.ctr-id -t 10
+ExecReload=/usr/bin/podman kill -s HUP copilot-nuclei
+SyslogIdentifier=%u
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/copilot-nuclei.ctr-id
+PIDFile=%t/copilot-nuclei.pid
+Type=forking
+
+[Install]
+WantedBy=default.target

@@ -6,7 +6,7 @@
 [Unit]
 Description=Podman  copilot-frontend.service
 BindsTo=copilot.service
-After=copilot.service mariadb-app.service copilot-backend.service
+After=copilot.service mariadb-app.service copilot-backend.service copilot-nuclei.service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n

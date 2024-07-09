@@ -10,8 +10,8 @@
 
 [Unit]
 Description=Podman copilot.service
-Requires=mariadb-app.service copilot-backend.service copilot-frontend.service
-Before=mariadb-app.service copilot-backend.service copilot-frontend.service
+Requires=mariadb-app.service copilot-backend.service copilot-nuclei.service copilot-frontend.service
+Before=mariadb-app.service copilot-backend.service copilot-nuclei.service copilot-frontend.service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
