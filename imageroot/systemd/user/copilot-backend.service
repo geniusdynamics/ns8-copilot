@@ -10,14 +10,12 @@ After=copilot.service mariadb-app.service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
-EnvironmentFile=%S/state/environment
-EnvironmentFile=-%S/state/smarthost.env
-WorkingDirectory=%S/state
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
 Restart=always
 TimeoutStopSec=70
 ExecStartPre=/bin/mkdir -p tmp
 ExecStartPre=/bin/rm -f %t/copilot-backend.pid %t/copilot-backend.ctr-id
-ExecStartPre=-runagent discover-smarthost
 ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-backend.pid \
     --cidfile %t/copilot-backend.ctr-id --cgroups=no-conmon \
     --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-backend \
