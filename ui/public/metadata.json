@@ -3,17 +3,19 @@
   "description": {
     "en": "SOCFortress CoPilot focuses on providing a single pane of glass for all your security operations needs"
   },
-  "categories": ["security"],
+  "categories": [
+    "security"
+  ],
   "authors": [
     {
-      "name": "Martin Bhuong",
-      "email": "martin@genius.ke"
+      "name": "Genius Dynamics",
+      "email": "support@genius.ke"
     }
   ],
   "docs": {
     "documentation_url": "https://github.com/socfortress/CoPilot/tree/v0.0.9",
-    "bug_url": "https://github.com/geniusdynamics/dev",
-    "code_url": "https://github.com/ageniusdynamicsuthor/ns8-copilot"
+    "bug_url": "https://github.com/geniusdynamics/ns8-copilot/issues",
+    "code_url": "https://github.com/geniusdynamics/ns8-copilot"
   },
   "source": "ghcr.io/geniusdynamics/copilot"
 }
