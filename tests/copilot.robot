@@ -1,6 +1,9 @@
 *** Settings ***
 Library    SSHLibrary
 
+*** Variables ***
+${HOST}    copilot.example.org
+
 *** Test Cases ***
 Check if copilot is installed correctly
     ${output}  ${rc} =    Execute Command    add-module ${IMAGE_URL} 1
