@@ -1,7 +1,8 @@
 {
   "name": "copilot",
   "description": {
-    "en": "SOCFortress CoPilot focuses on providing a single pane of glass for all your security operations needs"
+    "en": "SOCFortress CoPilot focuses on providing a single pane of glass for all your security operations needs",
+    "it": "Assistente AI self-hosted per la scrittura di codice e testi."
   },
   "categories": [
     "security"
