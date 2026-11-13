@@ -13,6 +13,7 @@ Environment=PODMAN_SYSTEMD_UNIT=%n
 EnvironmentFile=%E/state/environment
 WorkingDirectory=%E/state
 Restart=always
+RestartSec=10
 TimeoutStopSec=70
 ExecStartPre=/bin/mkdir -p tmp
 ExecStartPre=/bin/rm -f %t/copilot-backend.pid %t/copilot-backend.ctr-id
@@ -22,7 +23,10 @@ ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-backend.pid \
     --volume copilot-logs:/opt/logs \
     --volume copilot-data:/opt/copilot/backend/data \
     --env=COPILOT_* \
-    --env MYSQL_UR=127.0.0.1 \
+    --env MYSQL_URL=127.0.0.1 \
+    --env MYSQL_HOST=127.0.0.1 \
+    --env MYSQL_PORT=3306 \
+    --env MYSQL_ENABLED=true \
     --env MYSQL_USER=copilot \
     --env MYSQL_PASSWORD=copilot \
     --env MYSQL_DATABASE=copilot \
