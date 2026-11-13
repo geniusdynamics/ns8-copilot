@@ -4,7 +4,7 @@
 #
 
 [Unit]
-Description=Podman mariadb-app.service
+Description=Podman mariadb-app.service (MySQL 8.0, the database CoPilot ships with)
 BindsTo=copilot.service
 After=copilot.service
 
@@ -20,12 +20,11 @@ ExecStart=/usr/bin/podman run --conmon-pidfile %t/mariadb-app.pid \
     --pod-id-file %t/copilot.pod-id --replace -d --name mariadb-app \
     --env-file=%E/state/environment \
     --volume mysql-data:/var/lib/mysql/:Z \
-    --env MARIADB_ROOT_PASSWORD=Nethesis,1234 \
-    --env MARIADB_DATABASE=copilot \
-    --env MARIADB_USER=copilot \
-    --env MARIADB_PASSWORD=copilot \
-    --env MARIADB_AUTO_UPGRADE=1 \
-    ${MARIADB_IMAGE} \
+    --env MYSQL_ROOT_PASSWORD=Nethesis,1234 \
+    --env MYSQL_DATABASE=copilot \
+    --env MYSQL_USER=copilot \
+    --env MYSQL_PASSWORD=copilot \
+    ${MYSQL_IMAGE} \
     --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
 ExecStartPost=/usr/bin/podman exec  mariadb-app /bin/bash -c 'printf "[client] \npassword=Nethesis,1234" > /root/.my.cnf'
 ExecStartPost=/usr/bin/podman exec mariadb-app /bin/bash -c "while ! mysqladmin ping -h localhost -P 3306 -u root; do sleep 1; done"

@@ -50,7 +50,7 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
     --label="org.nethserver.min-core=3.0.0" \
-    --label="org.nethserver.images=docker.io/mariadb:10.11.5 ghcr.io/socfortress/copilot-backend:latest ghcr.io/socfortress/copilot-frontend:latest ghcr.io/socfortress/copilot-nuclei-module:latest" \
+    --label="org.nethserver.images=docker.io/library/mysql:8.0.46-debian ghcr.io/socfortress/copilot-backend:latest ghcr.io/socfortress/copilot-frontend:latest ghcr.io/socfortress/copilot-nuclei-module:latest" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
