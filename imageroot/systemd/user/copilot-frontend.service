@@ -10,14 +10,13 @@ After=copilot.service mariadb-app.service copilot-backend.service copilot-nuclei
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
-EnvironmentFile=%S/state/environment
-EnvironmentFile=-%S/state/smarthost.env
-WorkingDirectory=%S/state
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
 Restart=always
+RestartSec=10
 TimeoutStopSec=70
 ExecStartPre=/bin/mkdir -p tmp
 ExecStartPre=/bin/rm -f %t/copilot-frontend.pid %t/copilot-frontend.ctr-id
-ExecStartPre=-runagent discover-smarthost
 ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-frontend.pid \
     --cidfile %t/copilot-frontend.ctr-id --cgroups=no-conmon \
     --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-frontend \

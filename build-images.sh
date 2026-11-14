@@ -14,6 +14,9 @@ images=()
 repobase="${REPOBASE:-ghcr.io/geniusdynamics}"
 # Configure the image name
 reponame="copilot"
+# Node.js 25+ no longer ships Corepack, install it from npm
+# renovate: datasource=npm packageName=corepack
+corepack_version=0.36.0
 
 # Create a new empty container image
 container=$(buildah from scratch)
@@ -21,7 +24,8 @@ container=$(buildah from scratch)
 # Reuse existing nodebuilder-copilot container, to speed up builds
 if ! buildah containers --format "{{.ContainerName}}" | grep -q nodebuilder-copilot; then
     echo "Pulling NodeJS runtime..."
-    buildah from --name nodebuilder-copilot -v "${PWD}:/usr/src:Z" docker.io/library/node:lts
+    buildah from --name nodebuilder-copilot -v "${PWD}:/usr/src:Z" docker.io/library/node:26.13.0-slim
+    buildah run nodebuilder-copilot sh -c "npm install -g corepack@${corepack_version} && corepack enable"
 fi
 
 echo "Build static UI files with node..."
@@ -45,7 +49,8 @@ buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
-    --label="org.nethserver.images=docker.io/mariadb:10.11.5 ghcr.io/socfortress/copilot-backend:latest ghcr.io/socfortress/copilot-frontend:latest ghcr.io/socfortress/copilot-nuclei-module:latest" \
+    --label="org.nethserver.min-core=3.0.0" \
+    --label="org.nethserver.images=docker.io/library/mysql:8.0.46-debian ghcr.io/socfortress/copilot-backend:latest ghcr.io/socfortress/copilot-frontend:latest ghcr.io/socfortress/copilot-nuclei-module:latest" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
