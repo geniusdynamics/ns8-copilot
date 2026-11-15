@@ -1,8 +1,8 @@
 {
-  "name": "copilot",
+  "name": "socfortress-copilot",
   "description": {
-    "en": "SOCFortress CoPilot focuses on providing a single pane of glass for all your security operations needs",
-    "it": "Assistente AI self-hosted per la scrittura di codice e testi."
+    "en": "SOCFortress CoPilot: a single pane of glass for your security operations, with Wazuh, Graylog, Velociraptor and other SOC tools",
+    "it": "SOCFortress CoPilot: un unico pannello per le operazioni di sicurezza, con Wazuh, Graylog, Velociraptor e altri strumenti SOC"
   },
   "categories": [
     "security"
@@ -14,9 +14,9 @@
     }
   ],
   "docs": {
-    "documentation_url": "https://github.com/socfortress/CoPilot/tree/v0.0.9",
+    "documentation_url": "https://docs.socfortress.co",
     "bug_url": "https://github.com/geniusdynamics/ns8-copilot/issues",
     "code_url": "https://github.com/geniusdynamics/ns8-copilot"
   },
-  "source": "ghcr.io/geniusdynamics/copilot"
+  "source": "ghcr.io/geniusdynamics/socfortress-copilot"
 }

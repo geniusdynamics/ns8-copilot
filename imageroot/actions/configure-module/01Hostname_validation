@@ -5,25 +5,18 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
+import json
 import os
 import sys
-import json
+
 import agent
-import urllib.request
-import urllib.error
-import ssl
 
-agent.set_weight(os.path.basename(__file__), 0) # Validation step, no task progress at all
+agent.set_weight(os.path.basename(__file__), 0)  # validation step, no progress
 
-# retrieve json data
 data = json.load(sys.stdin)
-
-# Setup default values
-host = data.get("host")
-# do not test if it is the same host
-oldHost = os.environ.get('TRAEFIK_HOST','')
-
-if host != oldHost and agent.http_route_in_use(domain=host):
+host = data["host"]
+# A host already routed to this instance is not a conflict
+if host != os.environ.get('TRAEFIK_HOST', '') and agent.http_route_in_use(domain=host):
     agent.set_status('validation-failed')
-    json.dump([{'field':'host','parameter':'host','value':host,'error':'domain_already_used_in_traefik'}],fp=sys.stdout)
+    json.dump([{'field': 'host', 'parameter': 'host', 'value': host, 'error': 'domain_already_used_in_traefik'}], fp=sys.stdout)
     sys.exit(2)

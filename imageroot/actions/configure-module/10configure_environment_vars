@@ -1,40 +1,76 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2022 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
+#
+# Save the CoPilot settings and write copilot.env, read by the backend.
+#
+# - Each setting is kept in the module environment as COPILOT_<NAME>, so
+#   get-configuration, restore and clone find it again. A setting left out
+#   of the request keeps its current value (or the CoPilot default).
+# - The secrets are in mysql.env, minio.env and secrets.env (create-module),
+#   the mail settings in smarthost.env (bin/discover-smarthost) and the
+#   settings the admin sets by hand in custom.env, read last.
+#
+
 import json
+import os
 import sys
+
 import agent
 
-# Try to parse the stdin as JSON.
-# If parsing fails, output everything to stderr
 data = json.load(sys.stdin)
 
-# copilot CSRF settings
-host = data.get("host", "")
-#SERVER_HOST = "https://"+host
-SERVER_HOST = host
-
-#copilot hostname
-agent.set_env("SERVER_HOST", SERVER_HOST)
-#This is specific to you module, so you need to change it accordingly.
-# we read a json stdin {"vars1":true, "var2":"foo", "vars3": 3} and we writ it to .config/state/environment
-# Upper case to set environment variable and minor case to read from stdin
-
-# this values must exists in the json stdin
-# agent.set_env("MAIL_SERVER", data["mail_server"])
-# agent.set_env("LDAP_DOMAIN", data["ldap_domain"])
-
-# you can add default values for the following variables
-# agent.set_env("MAIL_DOMAIN",data.get("mail_domain",""))
-# agent.set_env("WOWORKERSCOUNT",data.get("workers_count",3))
-# agent.set_env("AUXILIARYACCOUNT",data.get("auxiliary_account",True))
-# agent.set_env("ACTIVESYNC",data.get("activesync",False))
+# input key: (CoPilot variable, type, default), see the upstream .env.example
+SETTINGS = {
+    "access_token_expire_minutes": ("ACCESS_TOKEN_EXPIRE_MINUTES", int, 1440),
+    "audit_log_retention_days": ("AUDIT_LOG_RETENTION_DAYS", int, 90),
+    "default_alert_severity": ("DEFAULT_ALERT_SEVERITY", str, "High"),
+    "announcements_enabled": ("ANNOUNCEMENTS_ENABLED", bool, True),
+    "talon_release_check_enabled": ("TALON_RELEASE_CHECK_ENABLED", bool, True),
+    "mail_from": ("SMTP_FROM", str, ""),
+}
 
 
-# Make sure everything is saved inside the environment file
-# just before starting systemd unit
-#agent.dump_env()
+def env_value(value, kind):
+    if kind is bool:
+        return "true" if value else "false"
+    return str(value).strip()
+
+
+host = data["host"]
+agent.set_env("TRAEFIK_HOST", host)
+agent.set_env("TRAEFIK_HTTP2HTTPS", data.get("http2https", True))
+agent.set_env("TRAEFIK_LETS_ENCRYPT", data.get("lets_encrypt", False))
+
+copilot = {
+    "SERVER_IP": "0.0.0.0",
+    # The containers of the pod reach each other on 127.0.0.1
+    "MYSQL_URL": "127.0.0.1",
+    "MINIO_URL": "127.0.0.1",
+    "MINIO_SECURE": "False",
+    # Links in notifications and e-mails, passkey login
+    "COPILOT_URL": "https://" + host,
+    "WEBAUTHN_RP_ID": host,
+    "WEBAUTHN_RP_NAME": "SOCFortress CoPilot",
+    "WEBAUTHN_ORIGINS": "https://" + host,
+}
+
+for key, (name, kind, default) in SETTINGS.items():
+    if key in data:
+        value = env_value(data[key], kind)
+    elif "COPILOT_" + name in os.environ:
+        value = os.environ["COPILOT_" + name]
+    else:
+        value = env_value(default, kind)
+    agent.set_env("COPILOT_" + name, value)
+    if name == "SMTP_FROM":
+        continue  # written by bin/discover-smarthost, with the mail settings
+    copilot[name] = value
+
+agent.write_envfile("copilot.env", copilot)
+os.chmod("copilot.env", 0o600)
+agent.dump_env()

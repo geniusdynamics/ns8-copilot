@@ -1,12 +1,22 @@
 #
-# Copyright (C) 2022 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
+#
+# CoPilot frontend: nginx serves the web application and passes /api to
+# the backend. Its upstream site listens on 80 and 443 with a self-signed
+# certificate, and port 80 belongs to the Nuclei module in this pod: the
+# module site (etc/copilot-frontend.conf.template) listens on 8080 in plain
+# HTTP, as Traefik terminates TLS, and keeps the upstream locations. The
+# image entrypoint still creates a certificate and DH parameters: the
+# frontend-certs volume keeps them, so this happens only once. The unit is
+# started once nginx answers.
+#
 [Unit]
-Description=Podman  copilot-frontend.service
+Description=Podman copilot-frontend.service
 BindsTo=copilot.service
-After=copilot.service mariadb-app.service copilot-backend.service copilot-nuclei.service
+After=copilot.service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
@@ -14,21 +24,23 @@ EnvironmentFile=%E/state/environment
 WorkingDirectory=%E/state
 Restart=always
 RestartSec=10
+TimeoutStartSec=600
 TimeoutStopSec=70
-ExecStartPre=/bin/mkdir -p tmp
 ExecStartPre=/bin/rm -f %t/copilot-frontend.pid %t/copilot-frontend.ctr-id
 ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-frontend.pid \
     --cidfile %t/copilot-frontend.ctr-id --cgroups=no-conmon \
-    --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-frontend \
-    --volume copilot-frontend:/var/www/html/:Z \
-    --volume ./tmp:/tmp:Z \
-    --env=COPILOT_* \
-    --env SERVER_HOST=${SERVER_HOST} \
+    --pod-id-file %t/copilot.pod-id --replace -d --name copilot-frontend \
+    --volume frontend-certs:/etc/nginx/certs:Z \
+    --volume %E/etc/copilot-frontend.conf.template:/etc/nginx/templates/default.conf.template:ro,z \
+    --env SERVER_HOST=${TRAEFIK_HOST} \
+    --env TLS_CERT_PATH=/etc/nginx/certs/server.crt \
+    --env TLS_KEY_PATH=/etc/nginx/certs/server.key \
     ${COPILOT_FRONTEND_IMAGE}
+ExecStartPost=/bin/bash -c "until podman exec copilot-frontend wget -q -O /dev/null http://127.0.0.1:8080/; do \
+    [[ $$(podman inspect -f '{{.State.Running}}' copilot-frontend) == true ]] || exit 1; sleep 3; done"
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/copilot-frontend.ctr-id -t 10
-ExecReload=/usr/bin/podman kill -s HUP copilot-frontend
-SyslogIdentifier=%u
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/copilot-frontend.ctr-id
+SyslogIdentifier=%u
 PIDFile=%t/copilot-frontend.pid
 Type=forking
 

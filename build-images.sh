@@ -12,11 +12,25 @@ set -e
 images=()
 # The image will be pushed to GitHub container registry
 repobase="${REPOBASE:-ghcr.io/geniusdynamics}"
-# Configure the image name
-reponame="copilot"
+# Configure the image name. The ghcr.io/geniusdynamics/copilot package
+# belongs to an older repository and refuses the pushes of this one
+# (denied: permission_denied: write_package).
+reponame="socfortress-copilot"
 # Node.js 25+ no longer ships Corepack, install it from npm
 # renovate: datasource=npm packageName=corepack
 corepack_version=0.36.0
+
+# Images of the upstream docker-compose.yml, https://github.com/socfortress/CoPilot
+# renovate: datasource=docker packageName=docker.io/library/mysql
+MYSQL_VERSION=8.0.46-debian
+# renovate: datasource=docker packageName=ghcr.io/socfortress/minio
+MINIO_VERSION=RELEASE.2024-09-13T20-26-02Z
+# SOCFortress publishes the CoPilot images with the "latest" tag only, no
+# version tag: pin the digest of the image index. Renovate updates the digest,
+# and a node pulls the image again on update only when the digest changes.
+copilot_backend_image="ghcr.io/socfortress/copilot-backend:latest@sha256:eb95ceb1d68e866ea902f90f27452ebdd3ec76e365dbf659e77ac5003b387328"
+copilot_frontend_image="ghcr.io/socfortress/copilot-frontend:latest@sha256:bc9dece32b450a2f1f71e97a16a526cfeb452306f8c664ad7e1801f38dfbe759"
+copilot_nuclei_image="ghcr.io/socfortress/copilot-nuclei-module:latest@sha256:9014788fa96786ac5b59faed497db0d62679993791a68600d1e3df0d4bb133e1"
 
 # Create a new empty container image
 container=$(buildah from scratch)
@@ -38,19 +52,14 @@ buildah run \
 # Add imageroot directory to the container image
 buildah add "${container}" imageroot /imageroot
 buildah add "${container}" ui/dist /ui
-# Setup the entrypoint, ask to reserve one TCP port with the label and set a rootless container
-# Select you image(s) with the label org.nethserver.images
-# ghcr.io/xxxxx is the GitHub container registry or your own registry or docker.io for Docker Hub
-# The image tag is set to latest by default, but can be overridden with the IMAGETAG environment variable
-# --label="org.nethserver.images=docker.io/mariadb:10.11.5 docker.io/roundcube/roundcubemail:1.6.4-apache"
-# rootfull=0 === rootless container
-# tcp-ports-demand=1 number of tcp Port to reserve , 1 is the minimum, can be udp or tcp
+# One TCP port for Traefik, rootless. The images of the pod come from the
+# variables above.
 buildah config --entrypoint=/ \
     --label="org.nethserver.authorizations=traefik@node:routeadm" \
     --label="org.nethserver.tcp-ports-demand=1" \
     --label="org.nethserver.rootfull=0" \
     --label="org.nethserver.min-core=3.0.0" \
-    --label="org.nethserver.images=docker.io/library/mysql:8.0.46-debian ghcr.io/socfortress/copilot-backend:latest ghcr.io/socfortress/copilot-frontend:latest ghcr.io/socfortress/copilot-nuclei-module:latest" \
+    --label="org.nethserver.images=docker.io/library/mysql:${MYSQL_VERSION} ghcr.io/socfortress/minio:${MINIO_VERSION} ${copilot_backend_image} ${copilot_frontend_image} ${copilot_nuclei_image}" \
     "${container}"
 # Commit the image
 buildah commit "${container}" "${repobase}/${reponame}"
