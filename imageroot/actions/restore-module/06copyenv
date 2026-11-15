@@ -1,23 +1,21 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2022 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-import sys
+# Copy the route and the CoPilot settings (COPILOT_*) from the backed-up
+# environment. The secrets come back with mysql.env, minio.env, secrets.env
+# and custom.env.
+
 import json
+import sys
+
 import agent
 
-request = json.load(sys.stdin)
-
-original_environment = request['environment']
-
-for evar in [
-        "TRAEFIK_HOST",
-        "TRAEFIK_HTTP2HTTPS",
-        "TRAEFIK_LETS_ENCRYPT",
-    ]:
-    agent.set_env(evar, original_environment[evar])
-
+renv = json.load(sys.stdin)["environment"]
+for name, value in renv.items():
+    if name in ("TRAEFIK_HOST", "TRAEFIK_HTTP2HTTPS") or name.startswith("COPILOT_"):
+        agent.set_env(name, value)
 agent.dump_env()

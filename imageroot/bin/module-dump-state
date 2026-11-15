@@ -1,21 +1,25 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2022 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-set -e
+# Before a backup: dump the CoPilot database, restored by
+# restore-module/40restore_database. The root password stays inside the
+# container, in the environment of mysqldump.
 
-if ! systemctl --user -q is-active copilot.service; then
+set -e -o pipefail
+
+if ! systemctl --user -q is-active mysql-app.service; then
     exit 0
 fi
-
-podman exec mariadb-app mysqldump \
-        --databases copilot \
-        --default-character-set=utf8mb4 \
-        --skip-dump-date \
-        --ignore-table=mysql.event \
-        --single-transaction \
-        --quick \
-        --add-drop-table  > copilot.sql
+echo "Dumping the copilot database" 1>&2
+podman exec mysql-app sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysqldump -uroot \
+    --databases copilot \
+    --default-character-set=utf8mb4 \
+    --skip-dump-date \
+    --single-transaction \
+    --quick \
+    --routines \
+    --add-drop-table' > copilot.sql

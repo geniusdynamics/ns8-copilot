@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (C) 2026 Genius Dynamics
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# Configure the restored instance with every setting of the backup. Let's
+# Encrypt stays off: the DNS name may not point to this node yet.
+#
+
+import json
+import os
+import sys
+
+import agent
+import agent.tasks
+
+renv = json.load(sys.stdin)["environment"]
+
+
+def flag(name, default):
+    return renv.get(name, default).lower() == "true"
+
+
+data = {
+    "host": renv["TRAEFIK_HOST"],
+    "http2https": flag("TRAEFIK_HTTP2HTTPS", "True"),
+    "lets_encrypt": False,
+}
+for key, name in (("access_token_expire_minutes", "ACCESS_TOKEN_EXPIRE_MINUTES"),
+                  ("audit_log_retention_days", "AUDIT_LOG_RETENTION_DAYS")):
+    if renv.get("COPILOT_" + name, "").isdigit():
+        data[key] = int(renv["COPILOT_" + name])
+for key, name in (("default_alert_severity", "DEFAULT_ALERT_SEVERITY"), ("mail_from", "SMTP_FROM")):
+    if "COPILOT_" + name in renv:
+        data[key] = renv["COPILOT_" + name]
+for key, name in (("announcements_enabled", "ANNOUNCEMENTS_ENABLED"),
+                  ("talon_release_check_enabled", "TALON_RELEASE_CHECK_ENABLED")):
+    if "COPILOT_" + name in renv:
+        data[key] = flag("COPILOT_" + name, "true")
+
+ret = agent.tasks.run(agent_id=os.environ["AGENT_ID"], action="configure-module", data=data)
+agent.assert_exp(ret["exit_code"] == 0, "The configure-module subtask failed!")

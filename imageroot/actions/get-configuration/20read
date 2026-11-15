@@ -1,26 +1,65 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (C) 2022 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
 #
-# Read configuration
+# Return the settings of configure-module. Every reader of the module can
+# run this action: it never returns a secret, only whether it is set.
 #
 
+import json
 import os
 import sys
-import json
+
 import agent
 
-# Prepare return variable
-config = {}
+INT = {
+    "access_token_expire_minutes": ("ACCESS_TOKEN_EXPIRE_MINUTES", 1440),
+    "audit_log_retention_days": ("AUDIT_LOG_RETENTION_DAYS", 90),
+}
+STR = {
+    "default_alert_severity": ("DEFAULT_ALERT_SEVERITY", "High"),
+    "mail_from": ("SMTP_FROM", ""),
+}
+BOOL = {
+    "announcements_enabled": ("ANNOUNCEMENTS_ENABLED", True),
+    "talon_release_check_enabled": ("TALON_RELEASE_CHECK_ENABLED", True),
+}
 
-# Read current configuration from the environment file
-config["host"] = os.getenv("TRAEFIK_HOST","")
-config["http2https"] = os.getenv("TRAEFIK_HTTP2HTTPS") == "True"
-config["lets_encrypt"] = os.getenv("TRAEFIK_LETS_ENCRYPT") == "True"
+config = {
+    "host": os.getenv("TRAEFIK_HOST", ""),
+    "http2https": os.getenv("TRAEFIK_HTTP2HTTPS", "True").lower() == "true",
+    "lets_encrypt": os.getenv("TRAEFIK_LETS_ENCRYPT", "False").lower() == "true",
+}
+for key, (name, default) in INT.items():
+    try:
+        config[key] = int(os.getenv("COPILOT_" + name, str(default)))
+    except ValueError:
+        config[key] = default
+for key, (name, default) in STR.items():
+    config[key] = os.getenv("COPILOT_" + name, default)
+for key, (name, default) in BOOL.items():
+    value = os.getenv("COPILOT_" + name)
+    config[key] = default if value is None else value.lower() == "true"
 
-# Dump the configuration to stdout
+
+def is_set(filename, name):
+    if not os.path.exists(filename):
+        return False
+    return bool(agent.read_envfile(filename).get(name))
+
+
+config["jwt_secret_set"] = is_set("secrets.env", "JWT_SECRET")
+config["sso_state_secret_set"] = is_set("secrets.env", "SSO_STATE_SECRET")
+
+# The cluster smarthost, for the page to say whether CoPilot can send e-mail
+try:
+    rdb = agent.redis_connect(use_replica=True)
+    config["mail_enabled"] = bool(agent.get_smarthost_settings(rdb).get("enabled"))
+except Exception:
+    config["mail_enabled"] = False
+
 json.dump(config, fp=sys.stdout)

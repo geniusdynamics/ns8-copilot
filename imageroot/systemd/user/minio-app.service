@@ -1,0 +1,42 @@
+#
+# Copyright (C) 2026 Genius Dynamics
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# MinIO, the object store of the upstream docker-compose.yml: the backend
+# creates its buckets at start (cases, reports, Sysmon configurations,
+# Velociraptor artifacts) and refuses to start without it. minio.env (mode
+# 0600) holds the root account. The console listens on 127.0.0.1 only.
+#
+[Unit]
+Description=Podman minio-app.service
+BindsTo=copilot.service
+After=copilot.service
+Before=copilot-backend.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
+Restart=always
+RestartSec=10
+TimeoutStartSec=300
+TimeoutStopSec=70
+ExecStartPre=/bin/rm -f %t/minio-app.pid %t/minio-app.ctr-id
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/minio-app.pid \
+    --cidfile %t/minio-app.ctr-id --cgroups=no-conmon \
+    --pod-id-file %t/copilot.pod-id --replace -d --name minio-app \
+    --env-file=%E/state/minio.env \
+    --volume minio-data:/data:Z \
+    ${MINIO_IMAGE} \
+    server /data --address 127.0.0.1:9000 --console-address 127.0.0.1:9001
+ExecStartPost=/bin/bash -c "until podman exec minio-app curl -sf -o /dev/null http://127.0.0.1:9000/minio/health/live; do sleep 3; done"
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/minio-app.ctr-id -t 10
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/minio-app.ctr-id
+SyslogIdentifier=%u
+PIDFile=%t/minio-app.pid
+Type=forking
+
+[Install]
+WantedBy=default.target

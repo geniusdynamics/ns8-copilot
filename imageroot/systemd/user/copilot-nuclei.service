@@ -1,12 +1,17 @@
 #
-# Copyright (C) 2022 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
+#
+# CoPilot Nuclei module: the backend calls it on http://copilot-nuclei-module
+# (port 80) to run Nuclei scans and read their reports, kept in the
+# nuclei-reports volume. The unit is started once it answers.
+#
 [Unit]
-Description=Podman  copilot-nuclei.service
+Description=Podman copilot-nuclei.service
 BindsTo=copilot.service
-After=copilot.service mariadb-app.service copilot-backend.service
+After=copilot.service
 
 [Service]
 Environment=PODMAN_SYSTEMD_UNIT=%n
@@ -14,20 +19,19 @@ EnvironmentFile=%E/state/environment
 WorkingDirectory=%E/state
 Restart=always
 RestartSec=10
+TimeoutStartSec=300
 TimeoutStopSec=70
-ExecStartPre=/bin/mkdir -p tmp
 ExecStartPre=/bin/rm -f %t/copilot-nuclei.pid %t/copilot-nuclei.ctr-id
 ExecStart=/usr/bin/podman run --conmon-pidfile %t/copilot-nuclei.pid \
     --cidfile %t/copilot-nuclei.ctr-id --cgroups=no-conmon \
-    --pod-id-file %t/copilot.pod-id --replace -d --name  copilot-nuclei \
-    --volume copilot-nuclei:/var/www/html/:Z \
-    --volume ./tmp:/tmp:Z \
-    --env=COPILOT_* \
+    --pod-id-file %t/copilot.pod-id --replace -d --name copilot-nuclei \
+    --volume nuclei-reports:/opt/copilot/app/reports:Z \
     ${COPILOT_NUCLEI_MODULE_IMAGE}
+ExecStartPost=/bin/bash -c "until podman exec copilot-nuclei curl -sf -o /dev/null http://127.0.0.1:80/; do \
+    [[ $$(podman inspect -f '{{.State.Running}}' copilot-nuclei) == true ]] || exit 1; sleep 3; done"
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/copilot-nuclei.ctr-id -t 10
-ExecReload=/usr/bin/podman kill -s HUP copilot-nuclei
-SyslogIdentifier=%u
 ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/copilot-nuclei.ctr-id
+SyslogIdentifier=%u
 PIDFile=%t/copilot-nuclei.pid
 Type=forking
 
