@@ -1,25 +1,34 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Configure kickstart",
-    "$id": "http://nethserver.org/json-schema/task/input/kickstart/configure-module",
-    "description": "Configure kickstart",
+    "title": "Configure SOCFortress CoPilot",
+    "$id": "http://nethserver.org/json-schema/task/input/copilot/configure-module",
+    "description": "Configure SOCFortress CoPilot. Settings left out keep their current value.",
     "examples": [
         {
-            "host": "kickstart.domain.org",
+            "host": "copilot.domain.org",
             "http2https": true,
             "lets_encrypt": true
+        },
+        {
+            "host": "copilot.domain.org",
+            "http2https": true,
+            "lets_encrypt": false,
+            "access_token_expire_minutes": 1440,
+            "audit_log_retention_days": 90,
+            "default_alert_severity": "High",
+            "announcements_enabled": true,
+            "talon_release_check_enabled": true,
+            "mail_from": "CoPilot <noreply@domain.org>"
         }
     ],
     "type": "object",
     "required": [
-        "host",
-        "http2https",
-        "lets_encrypt"
+        "host"
     ],
     "properties": {
         "host": {
             "type": "string",
-            "description": "Host name for the application, like 'kickstart.domain.org'",
+            "description": "Host name of CoPilot, like 'copilot.domain.org'",
             "format": "hostname",
             "pattern": "\\."
         },
@@ -32,6 +41,36 @@
             "type": "boolean",
             "title": "HTTP to HTTPS redirection",
             "description": "Redirect all the HTTP requests to HTTPS"
+        },
+        "access_token_expire_minutes": {
+            "type": "integer",
+            "description": "Lifetime of a login session, in minutes (ACCESS_TOKEN_EXPIRE_MINUTES)",
+            "minimum": 5,
+            "maximum": 525600
+        },
+        "audit_log_retention_days": {
+            "type": "integer",
+            "description": "Days the audit log is kept, 0 keeps it forever (AUDIT_LOG_RETENTION_DAYS)",
+            "minimum": 0,
+            "maximum": 36500
+        },
+        "default_alert_severity": {
+            "type": "string",
+            "description": "Severity of the alerts whose source gives none (DEFAULT_ALERT_SEVERITY)",
+            "enum": ["Informational", "Low", "Medium", "High", "Critical"]
+        },
+        "announcements_enabled": {
+            "type": "boolean",
+            "description": "Show the SOCFortress news feed, fetched from GitHub (ANNOUNCEMENTS_ENABLED)"
+        },
+        "talon_release_check_enabled": {
+            "type": "boolean",
+            "description": "Check ghcr.io for new Talon releases (TALON_RELEASE_CHECK_ENABLED)"
+        },
+        "mail_from": {
+            "type": "string",
+            "description": "Sender of the CoPilot e-mails, sent through the NS8 smarthost (SMTP_FROM). Empty: the smarthost user name, else noreply@<host>.",
+            "maxLength": 255
         }
     }
 }

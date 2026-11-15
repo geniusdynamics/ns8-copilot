@@ -1,0 +1,82 @@
+#
+# Copyright (C) 2026 Genius Dynamics
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# nginx site of the CoPilot frontend in the NS8 pod, mounted over
+# /etc/nginx/templates/default.conf.template of the upstream image. It is
+# frontend/build/etc/nginx/sites-enabled/default.conf of
+# https://github.com/socfortress/CoPilot, with these changes:
+# - one plain HTTP server on port 8080: Traefik terminates TLS, and port 80
+#   belongs to the Nuclei module, which shares the pod network;
+# - the scheme passed to the backend is the one of Traefik.
+#
+
+map $http_x_forwarded_proto $copilot_forwarded_proto {
+    default $http_x_forwarded_proto;
+    ""      $scheme;
+}
+
+server {
+    listen 8080 default_server;
+
+    root /var/www/copilot;
+    index index.html;
+
+    client_max_body_size 0;
+
+    access_log off;
+    log_not_found off;
+    error_log  /dev/stderr error;
+
+    add_header X-Frame-Options SAMEORIGIN;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Download-Options "noopen" always;
+    add_header X-Permitted-Cross-Domain-Policies "none" always;
+    add_header X-Robots-Tag "none" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Deny access to dotfiles (.htaccess, .env, .git, ...), not /.well-known/
+    location ~ /\.(?!well-known).* {
+        access_log off;
+        log_not_found off;
+        return 404;
+    }
+
+    # Proxy /api requests to the FastAPI backend
+    location ^~ /api {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $copilot_forwarded_proto;
+        proxy_pass http://copilot-backend:5000;
+
+        # A busy WAF takes up to 120s to answer /logs/stats, plus 15s to connect
+        location ~ ^/api/customer_waf/[^/]+/[0-9]+/stats$ {
+            proxy_read_timeout 180s;
+            proxy_pass http://copilot-backend:5000;
+        }
+
+        # Approving a Talon action proposal runs it inside the request
+        location ~ ^/api/talon/actions/[0-9a-fA-F-]+/approve$ {
+            proxy_read_timeout 600s;
+            proxy_pass http://copilot-backend:5000;
+        }
+    }
+
+    location ^~ /scoutsuite-report {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $copilot_forwarded_proto;
+        proxy_pass http://copilot-backend:5000;
+    }
+
+    # Run all other routes through the frontend
+    location / {
+        client_max_body_size 0;
+        try_files $uri $uri/ /index.html;
+    }
+}

@@ -1,0 +1,41 @@
+#
+# Copyright (C) 2026 Genius Dynamics
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+#
+# MySQL 8.0, the database of the upstream docker-compose.yml. mysql.env
+# (mode 0600) holds the root password and the copilot user. The unit is
+# started once MySQL answers on 127.0.0.1:3306.
+#
+[Unit]
+Description=Podman mysql-app.service
+BindsTo=copilot.service
+After=copilot.service
+Before=copilot-backend.service
+
+[Service]
+Environment=PODMAN_SYSTEMD_UNIT=%n
+EnvironmentFile=%E/state/environment
+WorkingDirectory=%E/state
+Restart=always
+RestartSec=10
+TimeoutStartSec=600
+TimeoutStopSec=70
+ExecStartPre=/bin/rm -f %t/mysql-app.pid %t/mysql-app.ctr-id
+ExecStart=/usr/bin/podman run --conmon-pidfile %t/mysql-app.pid \
+    --cidfile %t/mysql-app.ctr-id --cgroups=no-conmon \
+    --pod-id-file %t/copilot.pod-id --replace -d --name mysql-app \
+    --env-file=%E/state/mysql.env \
+    --volume mysql-data:/var/lib/mysql:Z \
+    ${MYSQL_IMAGE} \
+    --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+ExecStartPost=/bin/bash -c "until podman exec mysql-app mysqladmin ping -h 127.0.0.1 -P 3306 --silent; do sleep 3; done"
+ExecStop=/usr/bin/podman stop --ignore --cidfile %t/mysql-app.ctr-id -t 10
+ExecStopPost=/usr/bin/podman rm --ignore -f --cidfile %t/mysql-app.ctr-id
+SyslogIdentifier=%u
+PIDFile=%t/mysql-app.pid
+Type=forking
+
+[Install]
+WantedBy=default.target

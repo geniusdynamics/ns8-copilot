@@ -1,41 +1,41 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2022 Nethesis S.r.l.
+# Copyright (C) 2026 Genius Dynamics
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 
-set -e -o pipefail
-exec 1>&2 # Redirect any output to the journal (stderr)
+#
+# Load the copilot.sql dump of the backup into a new mysql-data volume: a
+# temporary MySQL creates the root account and the copilot user (mysql.env),
+# runs copilot.sql from its init directory, then the script below stops it.
+#
 
-# Prepare an initialization script that restores the dump file
+set -e -o pipefail
+exec 1>&2
+
+if [[ ! -f copilot.sql ]]; then
+    echo "No copilot.sql in the backup: CoPilot starts with an empty database"
+    exit 0
+fi
+
 mkdir -vp initdb.d
-mv -v copilot.sql initdb.d
-#do the bash file to restore and exit once done
+mv -v copilot.sql initdb.d/
 cat - >initdb.d/zz_copilot_restore.sh <<'EOS'
-# Print additional information:
+# Sourced by the entrypoint after copilot.sql: stop and exit
 mysql --version
-# The script is sourced, override entrypoint args and exit:
 set -- true
 docker_temp_server_stop
 exit 0
 EOS
-
-# once we exit we remove initdb.d
 trap 'rm -rfv initdb.d/' EXIT
 
-# we start a container to initiate a database and load the dump
-# at the end of copilot_restore.sh the dump is loaded and 
-# we exit the container
 podman run \
-  --rm \
-  --interactive \
-  --network=none \
-  --volume=./initdb.d:/docker-entrypoint-initdb.d:z \
-  --volume mysql-data:/var/lib/mysql/:Z \
-  --env MYSQL_ROOT_PASSWORD=Nethesis,1234 \
-  --env MYSQL_DATABASE=copilot \
-  --env MYSQL_USER=copilot \
-  --env MYSQL_PASSWORD=copilot \
-  --replace --name=restore_db \
-  ${MYSQL_IMAGE}
+    --rm \
+    --interactive \
+    --network=none \
+    --volume=./initdb.d:/docker-entrypoint-initdb.d:z \
+    --volume=mysql-data:/var/lib/mysql:Z \
+    --env-file=mysql.env \
+    --replace --name=restore_db \
+    "${MYSQL_IMAGE}"

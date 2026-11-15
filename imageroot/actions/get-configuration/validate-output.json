@@ -1,36 +1,80 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Get kickstart settings",
-    "$id": "http://nethserver.org/json-schema/task/input/kickstart/get-configuration",
-    "description": "Get kickstart settings",
+    "title": "Get SOCFortress CoPilot settings",
+    "$id": "http://nethserver.org/json-schema/task/output/copilot/get-configuration",
+    "description": "Settings of SOCFortress CoPilot. Secrets are never returned, only whether they are set.",
     "examples": [
         {
-            "host": "kickstart.domain.org",
+            "host": "copilot.domain.org",
             "http2https": true,
-            "lets_encrypt": true
+            "lets_encrypt": false,
+            "access_token_expire_minutes": 1440,
+            "audit_log_retention_days": 90,
+            "default_alert_severity": "High",
+            "announcements_enabled": true,
+            "talon_release_check_enabled": true,
+            "mail_from": "",
+            "mail_enabled": false,
+            "jwt_secret_set": true,
+            "sso_state_secret_set": true
         }
     ],
     "type": "object",
     "required": [
         "host",
         "http2https",
-        "lets_encrypt"
+        "lets_encrypt",
+        "access_token_expire_minutes",
+        "audit_log_retention_days",
+        "default_alert_severity",
+        "announcements_enabled",
+        "talon_release_check_enabled",
+        "mail_from",
+        "mail_enabled",
+        "jwt_secret_set",
+        "sso_state_secret_set"
     ],
     "properties": {
         "host": {
             "type": "string",
-            "description": "Host name for the application, like 'kickstart.domain.org'",
-            "format": "idn-hostname"
-        },
-        "lets_encrypt": {
-            "type": "boolean",
-            "title": "Let's Encrypt certificate",
-            "description": "Request a valid Let's Encrypt certificate."
+            "description": "Host name of CoPilot"
         },
         "http2https": {
+            "type": "boolean"
+        },
+        "lets_encrypt": {
+            "type": "boolean"
+        },
+        "access_token_expire_minutes": {
+            "type": "integer"
+        },
+        "audit_log_retention_days": {
+            "type": "integer"
+        },
+        "default_alert_severity": {
+            "type": "string"
+        },
+        "announcements_enabled": {
+            "type": "boolean"
+        },
+        "talon_release_check_enabled": {
+            "type": "boolean"
+        },
+        "mail_from": {
+            "type": "string"
+        },
+        "mail_enabled": {
             "type": "boolean",
-            "title": "HTTP to HTTPS redirection",
-            "description": "Redirect all the HTTP requests to HTTPS"
+            "description": "The cluster smarthost is enabled: CoPilot can send e-mail"
+        },
+        "jwt_secret_set": {
+            "type": "boolean",
+            "description": "The JWT signing key of the backend exists (secrets.env)"
+        },
+        "sso_state_secret_set": {
+            "type": "boolean",
+            "description": "The SSO state signing key of the backend exists (secrets.env)"
         }
-    }
+    },
+    "additionalProperties": false
 }

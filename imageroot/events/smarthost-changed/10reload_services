@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#
+# Copyright (C) 2026 Genius Dynamics
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+
+# The backend writes the mail settings when it starts (bin/discover-smarthost)
+
+set -e
+exec 1>&2
+systemctl --user try-restart copilot-backend.service
